@@ -1,0 +1,142 @@
+javascript:(function(){
+var CFG={budget:7,duration:2,country:"BD",goal:"MESSAGES",destinationUrl:"",messageText:"Trick zoon",videoUrl:"",postId:"",pageId:"",adAccountId:"",ctaType:"MESSAGE_PAGE",autoPublish:true};
+var steps=[];var panel=null;
+function createPanel(){
+var existing=document.getElementById('fbb-panel');if(existing)existing.remove();
+var d=document.createElement('div');d.id='fbb-panel';d.style.cssText='position:fixed;top:16px;right:16px;z-index:2147483647;background:#1c1e21;color:#e4e6eb;font-family:Arial,sans-serif;font-size:13px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.6);min-width:300px;max-width:360px;overflow:hidden;';
+var hdr=document.createElement('div');hdr.style.cssText='background:#1877f2;padding:10px 16px;font-weight:700;font-size:14px;display:flex;justify-content:space-between;align-items:center;';
+hdr.innerHTML='<span>⚡ FB BOOST STATUS(@Poriot_ke)</span>';
+var cls=document.createElement('button');cls.textContent='X';cls.style.cssText='background:none;border:none;color:#fff;cursor:pointer;font-size:14px;font-weight:700;padding:0 4px;';
+cls.onclick=function(){d.remove();};hdr.appendChild(cls);d.appendChild(hdr);
+var body=document.createElement('div');body.id='fbb-body';body.style.cssText='padding:12px 16px;max-height:380px;overflow-y:auto;';d.appendChild(body);
+var footer=document.createElement('div');footer.id='fbb-footer';footer.style.cssText='padding:8px 16px;border-top:1px solid #3a3b3c;display:none;';d.appendChild(footer);
+document.body.appendChild(d);panel=d;
+}
+function addStep(icon,msg,status){
+var body=document.getElementById('fbb-body');if(!body)return;
+var row=document.createElement('div');row.style.cssText='display:flex;align-items:flex-start;gap:8px;padding:4px 0;border-bottom:1px solid #3a3b3c;';
+var ic=document.createElement('span');ic.textContent=icon;ic.style.cssText='min-width:20px;font-size:14px;';
+var txt=document.createElement('span');txt.style.cssText='flex:1;line-height:1.4;'+(status==='ok'?'color:#42b72a;':status==='fail'?'color:#f02849;':status==='info'?'color:#e4e6eb;':'color:#f7b928');txt.textContent=msg;
+row.appendChild(ic);row.appendChild(txt);body.appendChild(row);body.scrollTop=body.scrollHeight;steps.push({icon:icon,msg:msg,status:status});
+}
+function updateFooter(html){var f=document.getElementById('fbb-footer');if(!f)return;f.style.display='block';f.innerHTML=html;}
+function delay(ms){return new Promise(function(r){setTimeout(r,ms);});}
+function waitForEl(sel,ms){return new Promise(function(res){var el=document.querySelector(sel);if(el)return res(el);var obs=new MutationObserver(function(){var el2=document.querySelector(sel);if(el2){obs.disconnect();clearTimeout(t);res(el2);}});obs.observe(document.body,{childList:true,subtree:true});var t=setTimeout(function(){obs.disconnect();res(null);},ms||4000);});}
+function getValidationError(){
+var sels=['[class*="errorMessage"]','[class*="error_message"]','[role="alert"]','[data-testid*="error"]','[class*="validationError"]'];
+for(var si=0;si<sels.length;si++){var errs=document.querySelectorAll(sels[si]);for(var i=0;i<errs.length;i++){var t=(errs[i].textContent||'').trim();if(t.length>3&&t.length<200)return t;}}return null;
+}
+function checkPaymentIssue(){
+var paymentKws=['payment','billing','card','credit','insufficient','fund'];
+var all=document.querySelectorAll('[class*="error"],[class*="warning"],[role="alert"]');
+for(var i=0;i<all.length;i++){var t=(all[i].textContent||'').toLowerCase();for(var j=0;j<paymentKws.length;j++){if(t.indexOf(paymentKws[j])!==-1)return true;}}return false;
+}
+function simulateInput(el,val){
+var nativeInputValueSetter=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value');if(nativeInputValueSetter)nativeInputValueSetter.set.call(el,val);else el.value=val;
+el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));el.dispatchEvent(new KeyboardEvent('keydown',{bubbles:true,key:'a'}));el.dispatchEvent(new KeyboardEvent('keyup',{bubbles:true}));
+}
+function simulateTextarea(el,val){
+var setter=Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype,'value');if(setter)setter.set.call(el,val);else el.value=val;
+el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));
+}
+function clickEl(el){if(!el)return;el.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,cancelable:true}));el.dispatchEvent(new MouseEvent('mouseup',{bubbles:true,cancelable:true}));el.click();el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));}
+function byText(tag,txt){var all=document.querySelectorAll(tag);for(var i=0;i<all.length;i++){var t=all[i].textContent||'';if(t.trim().toLowerCase().indexOf(txt.toLowerCase())!==-1)return all[i];}return null;}
+function byAria(lbl){return document.querySelector('[aria-label="'+lbl+'"]')||document.querySelector('[aria-label*="'+lbl+'"]');}
+function byPlaceholder(ph){var all=document.querySelectorAll('input,textarea');for(var i=0;i<all.length;i++){var p=(all[i].getAttribute('placeholder')||').toLowerCase();if(p.indexOf(ph.toLowerCase())!==-1)return all[i];}return null;}
+function detectPageData(){
+var pageId=CFG.pageId;var postId=CFG.postId;var adAccountId=CFG.adAccountId;var href=window.location.href;
+if(!pageId){var pid=href.match(/[?&]page_id=([0-9]+)/);if(pid)pageId=pid[1];if(!pageId){var profid=href.match(/profile\.php\?id=([0-9]+)/);if(profid)pageId=profid[1];}if(!pageId){var numid=href.match(/facebook\.com\/([0-9]{6,})\/?/);if(numid)pageId=numid[1];}if(!pageId){var pi=document.querySelector('[data-pageid],[data-page-id],[data-userid]');if(pi)pageId=pi.getAttribute('data-pageid')||pi.getAttribute('data-page-id')||pi.getAttribute('data-userid')||'';}if(!pageId){var mt=document.querySelector('meta[property="al:android:url"],meta[property="al:ios:url"]');if(mt){var mc=mt.content.match(/id=([0-9]+)/);if(mc)pageId=mc[1];}}}
+if(!postId){var sf=href.match(/story_fbid=([0-9]+)/);if(sf)postId=sf[1];if(!postId){var pp=href.match(/\/posts\/([A-Za-z0-9_]+)/);if(pp)postId=pp[1];}if(!postId){var pfb=href.match(/pfbid([A-Za-z0-9]+)/);if(pfb)postId=pfb[1];}if(!postId){var pv=href.match(/\/videos\/([0-9]+)/);if(pv)postId=pv[1];}if(!postId){var pph=href.match(/permalink\/([0-9]+)/);if(pph)postId=pph[1];}if(!postId){var dfts=document.querySelectorAll('[data-ft]');for(var di=0;di<dfts.length;di++){try{var ft=JSON.parse(dfts[di].getAttribute('data-ft')||'{}');if(ft.mf_story_key){postId=String(ft.mf_story_key);break;}if(ft.top_level_post_fbid){postId=String(ft.top_level_post_fbid);break;}}catch(e){}}}if(!postId){var dsi=document.querySelector('[data-story-id]');if(dsi)postId=dsi.getAttribute('data-story-id')||'';}if(!postId){var dpi=document.querySelector('[data-post-id]');if(dpi)postId=dpi.getAttribute('data-post-id')||'';}}
+if(!adAccountId){var act=href.match(/act=([0-9]+)/);if(act)adAccountId=act[1];if(!adAccountId){var aap=href.match(/[?&]ad_account_id=([0-9]+)/);if(aap)adAccountId=aap[1];}if(!adAccountId){var aEl=document.querySelector('[data-adaccount-id],[data-ad-account-id]');if(aEl)adAccountId=aEl.getAttribute('data-adaccount-id')||aEl.getAttribute('data-ad-account-id')||'';}}
+return{pageId:pageId,postId:postId,adAccountId:adAccountId};
+}
+async function detectAdAccounts(){
+var accounts=[];var selects=document.querySelectorAll('select');for(var i=0;i<selects.length;i++){var opts=selects[i].querySelectorAll('option');if(opts.length<2)continue;var looksLikeAccount=false;for(var j=0;j<opts.length;j++){if(/[0-9]{6,}/.test(opts[j].value)||opts[j].value.indexOf('act_')!==-1){looksLikeAccount=true;break;}}if(looksLikeAccount){for(var k=0;k<opts.length;k++){accounts.push({id:opts[k].value,name:(opts[k].textContent||').trim(),sel:selects[i]});}break;}}
+if(accounts.length>1){addStep('🔢',accounts.length+' Ad Accounts found','info');if(CFG.adAccountId){for(var ai=0;ai<accounts.length;ai++){if(accounts[ai].id===CFG.adAccountId||accounts[ai].id.indexOf(CFG.adAccountId)!==-1){accounts[ai].sel.value=accounts[ai].id;accounts[ai].sel.dispatchEvent(new Event('change',{bubbles:true}));addStep('✅','Ad Account selected: '+CFG.adAccountId,'ok');break;}}}else{var names=accounts.slice(0,3).map(function(a){return a.name||a.id;}).join(', ');addStep('⚠️','Multiple accounts: '+names,'warn');}}
+return accounts;
+}
+async function openBoostModal(){
+var btn=byAria('Boost post')||byAria('Boost Post')||byText('span','Boost post')||byText('span','Boost Post')||byText('div','Boost post')||byText('div','Boost Post')||document.querySelector('[data-testid="boost-post-button"]');
+if(btn){clickEl(btn.closest('button')||btn);addStep('🚀','Opening Boost modal...','warn');await delay(2500);return true;}
+addStep('⚠️','Boost button not found — open the Boost dialog manually','warn');return false;
+}
+async function selectGoal(){
+var goalMap={MESSAGES:['message','inbox','chat','messenger'],WEBSITE_VISITORS:['website','traffic','visitors','link'],VIDEO_VIEWS:['video','views','watch'],POST_ENGAGEMENT:['engagement','likes','reactions','interact'],LEAD_GENERATION:['lead','form','leads'],REACH:['reach','awareness','people']};
+var kws=goalMap[CFG.goal]||['message'];var found=false;
+for(var i=0;i<kws.length;i++){var el=byAria(kws[i])||byText('span',kws[i])||byText('div',kws[i])||byText('label',kws[i]);if(el){var target=el.closest('[role="radio"],[role="button"],[data-testid]')||el;clickEl(target);found=true;break;}}
+if(found)addStep('✅','Goal set: '+CFG.goal,'ok');else addStep('❌','Goal not set — open Boost dialog then re-run','fail');
+}
+async function fillBudget(){
+var inp=byAria('Daily budget')||byAria('Budget')||byPlaceholder('budget')||byPlaceholder('daily')||document.querySelector('[data-testid*="budget"] input');
+if(!inp){var nums=document.querySelectorAll('input[type="number"]');for(var i=0;i<nums.length;i++){var r=nums[i].getBoundingClientRect();if(r.width>50&&r.height>0){inp=nums[i];break;}}}
+if(!inp){var vis=document.querySelectorAll('input[type="text"]');for(var i=0;i<vis.length;i++){var r2=vis[i].getBoundingClientRect();if(r2.width>50&&r2.height>0){inp=vis[i];break;}}}
+if(inp){inp.focus();if(inp.select)inp.select();simulateInput(inp,String(CFG.budget));await delay(300);var verr=getValidationError();if(verr)addStep('❌','Ad Failed: '+verr,'fail');else addStep('✅','Budget set: $'+CFG.budget+'/day','ok');}else{addStep('❌','Ad Failed: Budget input not found','fail');}
+}
+async function fillDuration(){
+var sel=document.querySelector('select[name*="duration"]')||document.querySelector('select[data-testid*="duration"]');
+if(sel){sel.value=String(CFG.duration);sel.dispatchEvent(new Event('change',{bubbles:true}));addStep('✅','Duration set: '+CFG.duration+' days','ok');return;}
+var inp=byAria('Duration')||byPlaceholder('duration')||byPlaceholder('days');
+if(!inp){var lbl=byText('span','Duration')||byText('label','Duration');if(lbl){var p=lbl.closest('[class]');if(p)inp=p.querySelector('input');}}
+if(inp){inp.focus();simulateInput(inp,String(CFG.duration));addStep('✅','Duration set: '+CFG.duration+' days','ok');}else{addStep('❌','Ad Failed: Duration input not found','fail');}
+}
+async function fillCountry(){
+var sel=document.querySelector('select[name*="country"]')||document.querySelector('select[name*="location"]')||document.querySelector('select[data-testid*="country"]');
+if(sel){sel.value=CFG.country;sel.dispatchEvent(new Event('change',{bubbles:true}));addStep('✅','Country set: '+CFG.country,'ok');return;}
+var inp=byAria('Location')||byAria('Country')||byPlaceholder('Location')||byPlaceholder('location')||byPlaceholder('Country')||byPlaceholder('country');
+if(inp){inp.focus();simulateInput(inp,CFG.country);await delay(800);var opts=document.querySelectorAll('[role="option"],[role="listbox"] li,[data-testid*="suggestion"]');if(opts.length>0){clickEl(opts[0]);addStep('✅','Country set: '+CFG.country,'ok');}else{addStep('⚠️','Country typed: '+CFG.country+' (verify dropdown selection)','warn');}}else{addStep('❌','Ad Failed: Country/Location input not found','fail');}
+}
+async function fillGoalSpecific(){
+if(CFG.goal==='WEBSITE_VISITORS'&&CFG.destinationUrl){
+var urlInp=byAria('Destination URL')||byAria('Website URL')||byPlaceholder('URL')||byPlaceholder('website')||byPlaceholder('destination')||document.querySelector('input[type="url"]');
+if(urlInp){urlInp.focus();simulateInput(urlInp,CFG.destinationUrl);addStep('✅','Destination URL set','ok');}else{addStep('❌','URL input not found','fail');}
+}
+if(CFG.goal==='MESSAGES'&&CFG.messageText){
+var msgInp=byAria('Auto reply')||byPlaceholder('message')||byPlaceholder('reply')||document.querySelector('textarea');
+if(msgInp){msgInp.focus();simulateTextarea(msgInp,CFG.messageText);addStep('✅','Message text set','ok');}else{addStep('❌','Message text input not found','fail');}
+}
+if(CFG.goal==='VIDEO_VIEWS'&&CFG.videoUrl){
+var vidInp=byAria('Video URL')||byPlaceholder('video')||byPlaceholder('Video URL')||document.querySelector('input[type="url"]');
+if(vidInp){vidInp.focus();simulateInput(vidInp,CFG.videoUrl);addStep('✅','Video URL/Post ID set','ok');}else{addStep('❌','Video URL input not found','fail');}
+}
+}
+async function selectCTA(){
+var ctaMap={MESSAGE_PAGE:['send message','message'],LEARN_MORE:['learn more'],SHOP_NOW:['shop now'],SIGN_UP:['sign up'],BOOK_TRAVEL:['book now'],DOWNLOAD:['download'],GET_OFFER:['get offer'],CONTACT_US:['contact us'],WATCH_MORE:['watch more']};
+var labels=ctaMap[CFG.ctaType]||[];var sel=document.querySelector('select[name*="cta"]')||document.querySelector('select[name*="call_to_action"]')||document.querySelector('select[data-testid*="cta"]');
+if(sel){sel.value=CFG.ctaType;sel.dispatchEvent(new Event('change',{bubbles:true}));addStep('✅','CTA set: '+CFG.ctaType,'ok');return;}
+var found=false;for(var i=0;i<labels.length;i++){var el=byAria(labels[i])||byText('option',labels[i])||byText('span',labels[i])||byText('div',labels[i]);if(el){clickEl(el);found=true;break;}}
+if(found)addStep('✅','CTA selected: '+CFG.ctaType,'ok');else addStep('⚠️','CTA not found — may need manual select','warn');
+}
+async function checkForErrors(){
+var verr=getValidationError();if(verr){if(checkPaymentIssue())addStep('❌','Ad Failed: Payment method issue','fail');else addStep('❌','Ad Failed: '+verr,'fail');return true;}return false;
+}
+async function clickPublish(){
+var hadError=await checkForErrors();if(hadError)return;
+var publishBtn=byAria('Boost post now')||byAria('Boost')||byText('span','Boost now')||byText('span','Boost')||byText('span','Publish')||byText('span','Boost Post')||document.querySelector('[data-testid*="publish"],[data-testid*="boost-submit"]');
+if(!CFG.autoPublish){
+updateFooter('<button id="fbb-publish-btn" style="width:100%;padding:10px;background:#1877f2;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">⚡ Click to Publish / Boost</button>');
+addStep('⚠️','Ready — use the Publish button below','info');
+var pbtn=document.getElementById('fbb-publish-btn');
+if(pbtn){pbtn.onclick=function(){
+var b2=byAria('Boost post now')||byAria('Boost')||byText('span','Boost now')||byText('span','Boost')||byText('span','Publish')||byText('span','Boost Post')||document.querySelector('[data-testid*="publish"],[data-testid*="boost-submit"]');
+if(b2){var btn=b2.closest('button')||b2;if(!btn.disabled&&btn.getAttribute('aria-disabled')!=='true'){clickEl(btn);addStep('✅','Boost submitted!','ok');}else{var disErr=getValidationError();addStep('❌','Ad Failed: '+(disErr||'Button disabled — check form fields'),'fail');}}else{addStep('❌','Ad Failed: Publish button not found','fail');}
+var pb=document.getElementById('fbb-publish-btn');if(pb)pb.remove();
+};}
+return;
+}
+if(publishBtn){
+var btn=publishBtn.closest('button')||publishBtn;if(!btn.disabled&&btn.getAttribute('aria-disabled')!=='true'){clickEl(btn);await delay(1500);var postErr=getValidationError();if(postErr){if(checkPaymentIssue())addStep('❌','Ad Failed: Payment method issue','fail');else addStep('❌','Ad Failed: '+postErr,'fail');}else{addStep('✅','Boost submitted successfully!','ok');}}else{var disErr2=getValidationError();addStep('❌','Ad Failed: '+(disErr2||'Boost button disabled — check all fields'),'fail');}
+}else{addStep('❌','Ad Failed: Publish/Boost button not found','fail');}
+}
+async function run(){
+createPanel();addStep('⚡','Script started...','info');await delay(300);addStep('🔍','Detecting page data...','warn');await delay(400);
+var data=detectPageData();
+if(data.pageId)addStep('✅','Page ID: '+data.pageId,'ok');else addStep('⚠️','Page ID: Not detected from URL/DOM','warn');
+if(data.postId)addStep('✅','Post ID: '+data.postId,'ok');else addStep('⚠️','Post ID: Not detected — script will continue','warn');
+if(data.adAccountId)addStep('✅','Ad Account: '+data.adAccountId,'ok');else addStep('⚠️','Ad Account: Auto-detect from modal','warn');
+var opened=await openBoostModal();if(opened){addStep('✅','Boost dialog opened','ok');await detectAdAccounts();}
+addStep('⚙️','Filling ad settings...','warn');await delay(600);await selectGoal();await delay(500);await fillBudget();await delay(500);await fillDuration();await delay(500);await fillCountry();await delay(500);await fillGoalSpecific();await delay(500);await selectCTA();await delay(700);await clickPublish();
+}
+run().catch(function(e){
+var body=document.getElementById('fbb-body');if(body){var r=document.createElement('div');r.style.cssText='color:#f02849;padding:6px 0;';r.textContent='Script Error: '+e.message;body.appendChild(r);}
+});
+})()
