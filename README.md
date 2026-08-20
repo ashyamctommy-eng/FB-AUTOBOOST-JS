@@ -17,7 +17,7 @@
 * ***Watch the panel*** — *🚀 opens the Boost dialog. ⚠️ warns if IDs are missing. ❌ flags errors. Only after green rows stack should you submit—either automatically or by tapping the footer button.* 👁️
 
 ### Telegram 
-https:t.me/Poriot_ke
+https://t.me/Poriot_ke
 
 ### Whatsapp
 https://wa.me/+254717702563
